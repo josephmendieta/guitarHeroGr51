@@ -16,7 +16,8 @@
             /*border: 1px #000000 solid;*/
             /*border-radius: 50%;*/
             text-align: center;
-            margin-top: 40px;
+            margin-top: calc(50% - 75px);
+            /*margin-top: 40px;*/
             position: absolute;
         }
 
@@ -67,7 +68,7 @@
             const dis = new Map();
             dis.set(1, "22%")
             dis.set(2, "30%")
-            dis.set(3, "40%")
+            dis.set(3, "40%");
             dis.set(4, "50%")
             var competidorDiv = document.createElement("div");
             competidorDiv.setAttribute("class", "circulo1");
@@ -95,11 +96,17 @@
 
                 cont = cont + 1;
                 var elementos = document.querySelectorAll(".circulo1");
+                var finalReached = false;
                 elementos.forEach(function (elemento) {
+                    if ((cont * elemento.dataset.velocidad) >= (content.offsetHeight - elemento.offsetHeight)) {
+                        finalReached = true;
+                    }
                     elemento.style.marginLeft = elemento.dataset.top
                     elemento.style.marginTop = (cont * elemento.dataset.velocidad) + "px"
                 })
-
+                if (finalReached) {
+                    clearInterval(intervalo);
+                }
             }, 120);
 
         }
