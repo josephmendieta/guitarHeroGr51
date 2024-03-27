@@ -69,11 +69,6 @@
     animation-duration: 0.5s;
         }
 
-        /* Resto de estilos se mantienen igual */
-
-
-
-
         .content {
             width: 100%;
             height: 100vh;
@@ -178,56 +173,77 @@
     </div>
 
     <script>
-        var modal = document.querySelector(".modal");
-        var content = document.querySelector(".content");
-        var startGameBtn = document.getElementById("startGameBtn");
-        var cuerdas = ["cuerda1", "cuerda2", "cuerda3", "cuerda4"];
-        var puntaje = 0;
+var modal = document.querySelector(".modal");
+var content = document.querySelector(".content");
+var startGameBtn = document.getElementById("startGameBtn");
+var cuerdas = ["cuerda1", "cuerda2", "cuerda3", "cuerda4"];
+var puntaje = 0;
+document.getElementById("puntaje").textContent = puntaje;
+var competidores = {};
 
-        startGameBtn.addEventListener("click", function () {
-            modal.style.display = "none";
-            content.style.display = "flex";
-        });
+startGameBtn.addEventListener("click", function () {
+    modal.style.display = "none";
+    content.style.display = "flex";
+});
 
-        function crearCompetidor(cuerda) {
-            var competidorDiv = document.createElement("div");
-            competidorDiv.setAttribute("class", "circulo1");
-            competidorDiv.dataset.velocidad = Math.random() * 5;
-            document.getElementById(cuerda).appendChild(competidorDiv);
-            var cont = 0;
-            var intervalo = setInterval(function () {
-                cont = cont + 1;
-                if ((cont * competidorDiv.dataset.velocidad) >= (content.offsetHeight - competidorDiv.offsetHeight)) {
-                    clearInterval(intervalo);
-                    document.getElementById(cuerda).removeChild(competidorDiv);
-                    actualizarPuntaje(-1);
-                }
-                competidorDiv.style.top = (cont * competidorDiv.dataset.velocidad) + "px";
-                if (cont === Math.floor(content.offsetHeight / competidorDiv.dataset.velocidad)) {
-                    verificarTecla(cuerda);
-                }
-            }, 120);
+function crearCompetidor(cuerda) {
+    var competidorDiv = document.createElement("div");
+    competidorDiv.setAttribute("class", "circulo1");
+    competidorDiv.dataset.velocidad = Math.random() * 5;
+    document.getElementById(cuerda).appendChild(competidorDiv);
+    var cont = 0;
+    var intervalo = setInterval(function () {
+        cont = cont + 1;
+        if ((cont * competidorDiv.dataset.velocidad) >= (content.offsetHeight - competidorDiv.offsetHeight)) {
+            clearInterval(intervalo);
+            document.getElementById(cuerda).removeChild(competidorDiv);
+            actualizarPuntaje(-1);
+            var index = competidores[cuerda].indexOf(competidorDiv);
+            if (index > -1) {
+                competidores[cuerda].splice(index, 1);
+            }
         }
-
-        function actualizarPuntaje(puntos) {
-            puntaje += puntos;
-            document.getElementById("puntaje").textContent = puntaje;
+        competidorDiv.style.top = (cont * competidorDiv.dataset.velocidad) + "px";
+        if (cont === Math.floor(content.offsetHeight / competidorDiv.dataset.velocidad)) {
+            verificarTecla(cuerda, competidorDiv);
         }
+    }, 120);
+    if (!competidores[cuerda]) {
+        competidores[cuerda] = [];
+    }
+    competidores[cuerda].push(competidorDiv);
+}
 
-        function verificarTecla(cuerda) {
-            var teclaCorrecta = document.querySelector("#" + cuerdas[cuerda[cuerda.length - 1] - 1] + " .piano .tecla").getAttribute("data-tecla");
-            document.addEventListener("keydown", function (evt) {
-                if (evt.key === teclaCorrecta) {
-                    actualizarPuntaje(1);
-                } else {
-                    actualizarPuntaje(-1);
-                }
-            });
+function actualizarPuntaje(puntos) {
+    puntaje += puntos;
+    document.getElementById("puntaje").textContent = puntaje;
+}
+
+function verificarTecla(cuerda, competidorDiv) {
+    var teclaCorrecta = document.querySelector("#" + cuerdas[cuerda[cuerda.length - 1] - 1] + " .piano .tecla").getAttribute("data-tecla");
+    document.addEventListener("keydown", function (evt) {
+        if (evt.key === teclaCorrecta && competidores[cuerda].includes(competidorDiv)) {
+            actualizarPuntaje(1);
+            document.getElementById(cuerda).removeChild(competidorDiv);
+            var index = competidores[cuerda].indexOf(competidorDiv);
+            if (index > -1) {
+                competidores[cuerda].splice(index, 1);
+            }
+        } else {
+            actualizarPuntaje(-1);
         }
-        setInterval(function () {
-            var randomCuerda = cuerdas[Math.floor(Math.random() * cuerdas.length)];
-            crearCompetidor(randomCuerda);
-        }, 2000);
+    });
+}
+
+function iniciarCompetidorAleatorio() {
+    var randomCuerda = cuerdas[Math.floor(Math.random() * cuerdas.length)];
+    crearCompetidor(randomCuerda);
+    var tiempoAleatorio = Math.random() * 2000; // Puedes ajustar este valor para cambiar el rango de tiempo aleatorio
+    setTimeout(iniciarCompetidorAleatorio, tiempoAleatorio);
+}
+
+iniciarCompetidorAleatorio();
+
     </script>
 </body>
 
