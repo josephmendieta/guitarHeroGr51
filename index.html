@@ -25,7 +25,7 @@
             overflow: auto;
             background-color: rgba(0, 0, 0, 0.8);
             animation-name: fadeIn;
-    animation-duration: 0.5s;
+            animation-duration: 0.5s;
         }
 
         .modal-content {
@@ -66,7 +66,7 @@
             justify-content: space-around;
             background-color: black;
             animation-name: fadeOut;
-    animation-duration: 0.5s;
+            animation-duration: 0.5s;
         }
 
         .content {
@@ -125,22 +125,97 @@
             top: 20px;
             right: 20px;
         }
-    
 
-@keyframes fadeIn {
-    from {opacity: 0;}
-    to {opacity: 1;}
-}
 
-@keyframes fadeOut {
-    from {opacity: 1;}
-    to {opacity: 0;}
-}
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
 
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes fadeOut {
+            from {
+                opacity: 1;
+            }
+
+            to {
+                opacity: 0;
+            }
+        }
+
+        #gameOverModal {
+            display: none;
+            /* Inicialmente oculto */
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.8);
+            animation-name: fadeIn;
+            animation-duration: 0.5s;
+        }
+
+        #gameOverModal .modal-content {
+            background-color: #333;
+            margin: 15% auto;
+            padding: 20px;
+            border-radius: 10px;
+            width: 80%;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+        }
+
+        #gameOverModal h1 {
+            color: white;
+            text-align: center;
+        }
+
+        #reiniciarBtn {
+            display: block;
+            margin: 20px auto;
+            padding: 10px 20px;
+            font-size: 18px;
+            background-color: #f44336;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        #reiniciarBtn:hover {
+            background-color: #d32f2f;
+        }
+
+        #pausaBtn {
+
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            padding: 10px 20px;
+            font-size: 18px;
+            background-color: #f44336;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        #pausaBtn:hover {
+            background-color: #d32f2f;
+        }
     </style>
 </head>
 
 <body>
+    <button id="pausaBtn">Pausar Juego</button>
     <div class="modal">
         <div class="modal-content">
             <h1>¡Iniciar Guitar Hero!</h1>
@@ -172,77 +247,247 @@
         <div class="puntaje">Puntaje: <span id="puntaje">0</span></div>
     </div>
 
+    <div id="gameOverModal" class="modal">
+        <div class="modal-content">
+            <h1 id="puntajeFinal"></h1>
+            <button id="reiniciarBtn">Reiniciar Juego</button>
+        </div>
+    </div>
+
+
+
     <script>
-var modal = document.querySelector(".modal");
-var content = document.querySelector(".content");
-var startGameBtn = document.getElementById("startGameBtn");
-var cuerdas = ["cuerda1", "cuerda2", "cuerda3", "cuerda4"];
-var puntaje = 0;
-document.getElementById("puntaje").textContent = puntaje;
-var competidores = {};
+        var modal = document.querySelector(".modal");
+        var content = document.querySelector(".content");
+        var startGameBtn = document.getElementById("startGameBtn");
+        var cuerdas = ["cuerda1", "cuerda2", "cuerda3", "cuerda4"];
+        var puntajeInicial = 0;
+        var puntaje = puntajeInicial;
+        var intervalos = {};
+        var juegoEnPausa = false;
+        var estadoGuardado = {};
 
-startGameBtn.addEventListener("click", function () {
-    modal.style.display = "none";
-    content.style.display = "flex";
-});
+        document.getElementById("pausaBtn").addEventListener("click", function () {
+            juegoEnPausa = !juegoEnPausa;
+            this.textContent = juegoEnPausa ? "Reanudar Juego" : "Pausar Juego";
+            if (juegoEnPausa) {
+                pausarJuego();
+            } else {
+                reanudarJuego();
+            }
+        });
 
-function crearCompetidor(cuerda) {
-    var competidorDiv = document.createElement("div");
-    competidorDiv.setAttribute("class", "circulo1");
-    competidorDiv.dataset.velocidad = Math.random() * 5;
-    document.getElementById(cuerda).appendChild(competidorDiv);
-    var cont = 0;
-    var intervalo = setInterval(function () {
-        cont = cont + 1;
-        if ((cont * competidorDiv.dataset.velocidad) >= (content.offsetHeight - competidorDiv.offsetHeight)) {
-            clearInterval(intervalo);
-            document.getElementById(cuerda).removeChild(competidorDiv);
-            actualizarPuntaje(-1);
-            var index = competidores[cuerda].indexOf(competidorDiv);
-            if (index > -1) {
-                competidores[cuerda].splice(index, 1);
+        function pausarJuego() {
+            // Guardar el estado actual del juego
+            estadoGuardado = {};
+            cuerdas.forEach(function (cuerda) {
+                var competidores = document.getElementById(cuerda).querySelectorAll(".circulo1");
+                estadoGuardado[cuerda] = Array.from(competidores).map(function (competidor) {
+                    return {
+                        top: competidor.style.top,
+                        velocidad: competidor.dataset.velocidad,
+                        tecla: competidor.dataset.tecla
+                    };
+                });
+            });
+
+            // Detener todos los intervalos
+            Object.values(intervalos).forEach(function (intervalo) {
+                clearInterval(intervalo);
+            });
+            intervalos = {};
+        }
+
+        function reanudarJuego() {
+            // Restaurar el estado guardado del juego
+            cuerdas.forEach(function (cuerda) {
+                var cuerdaElement = document.getElementById(cuerda);
+                while (cuerdaElement.firstChild) {
+                    cuerdaElement.removeChild(cuerdaElement.firstChild);
+                }
+                estadoGuardado[cuerda].forEach(function (competidorGuardado) {
+                    var competidorDiv = document.createElement("div");
+                    competidorDiv.setAttribute("class", "circulo1");
+                    competidorDiv.dataset.velocidad = competidorGuardado.velocidad;
+                    competidorDiv.dataset.tecla = competidorGuardado.tecla;
+                    competidorDiv.style.top = competidorGuardado.top;
+                    cuerdaElement.appendChild(competidorDiv);
+                });
+            });
+
+            // Reiniciar todos los intervalos
+            Object.keys(intervalos).forEach(function (cuerda) {
+                crearCompetidor(cuerda);
+            });
+        }
+
+
+        startGameBtn.addEventListener("click", function () {
+            modal.style.display = "none";
+            content.style.display = "flex";
+            reiniciarJuego();
+        });
+
+        function reiniciarJuego() {
+            puntaje = puntajeInicial;
+            document.getElementById("puntaje").textContent = puntaje;
+            cuerdas.forEach(function (cuerda) {
+                var cuerdaElement = document.getElementById(cuerda);
+                while (cuerdaElement.children.length > 1) {
+                    cuerdaElement.removeChild(cuerdaElement.lastChild);
+                }
+            });
+            // Detener todos los intervalos cuando se reinicia el juego
+            Object.values(intervalos).forEach(function (intervalo) {
+                clearInterval(intervalo);
+            });
+            intervalos = {};
+        }
+
+        function actualizarPuntaje(puntos) {
+            if (juegoEnPausa) return;
+            puntaje += puntos;
+            document.getElementById("puntaje").textContent = puntaje;
+        }
+
+        function crearCompetidor(cuerda) {
+            if (juegoEnPausa) return;
+            var competidorDiv = document.createElement("div");
+            competidorDiv.setAttribute("class", "circulo1");
+            competidorDiv.dataset.velocidad = Math.random() * 5;
+            // Asigna un valor al atributo data-tecla dependiendo de la cuerda
+            switch (cuerda) {
+                case "cuerda1":
+                    competidorDiv.dataset.tecla = 'a';
+                    break;
+                case "cuerda2":
+                    competidorDiv.dataset.tecla = 's';
+                    break;
+                case "cuerda3":
+                    competidorDiv.dataset.tecla = 'd';
+                    break;
+                case "cuerda4":
+                    competidorDiv.dataset.tecla = 'f';
+                    break;
+            }
+            document.getElementById(cuerda).appendChild(competidorDiv);
+            var cont = 0;
+            intervalos[cuerda] = setInterval(function () {
+                cont = cont + 1;
+                if ((cont * competidorDiv.dataset.velocidad) >= (content.offsetHeight - competidorDiv.offsetHeight)) {
+                    clearInterval(intervalos[cuerda]);
+                    document.getElementById(cuerda).removeChild(competidorDiv);
+                    actualizarPuntaje(-1);
+                }
+                competidorDiv.style.top = (cont * competidorDiv.dataset.velocidad) + "px";
+                if (cont === Math.floor(content.offsetHeight / competidorDiv.dataset.velocidad)) {
+                    verificarTecla(cuerda);
+                }
+            }, 120);b
+        }
+
+        function verificarTecla(cuerda, teclaPresionada) {
+            if (juegoEnPausa) return;
+            var pianoElement = document.querySelector("#" + cuerdas[cuerda[cuerda.length - 1] - 1] + " .piano");
+            var competidores = document.getElementById(cuerda).querySelectorAll(".circulo1");
+            var discoEnPiano = false;
+            competidores.forEach(function (competidor) {
+                if (competidor.offsetTop < pianoElement.offsetHeight && competidor.dataset.tecla === teclaPresionada) {
+                    actualizarPuntaje(1);
+                    document.getElementById(cuerda).removeChild(competidor);
+                    discoEnPiano = true;
+                }
+            });
+            if (!discoEnPiano && (teclaPresionada === 'a' || teclaPresionada === 's' || teclaPresionada === 'd' || teclaPresionada === 'f')) {
+                // Detener el juego y mostrar el modal si se presiona una tecla cuando no hay un disco en el espacio del piano
+                detenerJuego();
             }
         }
-        competidorDiv.style.top = (cont * competidorDiv.dataset.velocidad) + "px";
-        if (cont === Math.floor(content.offsetHeight / competidorDiv.dataset.velocidad)) {
-            verificarTecla(cuerda, competidorDiv);
-        }
-    }, 120);
-    if (!competidores[cuerda]) {
-        competidores[cuerda] = [];
-    }
-    competidores[cuerda].push(competidorDiv);
-}
 
-function actualizarPuntaje(puntos) {
-    puntaje += puntos;
-    document.getElementById("puntaje").textContent = puntaje;
-}
-
-function verificarTecla(cuerda, competidorDiv) {
-    var teclaCorrecta = document.querySelector("#" + cuerdas[cuerda[cuerda.length - 1] - 1] + " .piano .tecla").getAttribute("data-tecla");
-    document.addEventListener("keydown", function (evt) {
-        if (evt.key === teclaCorrecta && competidores[cuerda].includes(competidorDiv)) {
-            actualizarPuntaje(1);
-            document.getElementById(cuerda).removeChild(competidorDiv);
-            var index = competidores[cuerda].indexOf(competidorDiv);
-            if (index > -1) {
-                competidores[cuerda].splice(index, 1);
+        function pausarIntervalos() {
+            for (var cuerda in intervalos) {
+                clearInterval(intervalos[cuerda]);
+                intervalos[cuerda] = null;
             }
-        } else {
-            actualizarPuntaje(-1);
         }
-    });
-}
 
-function iniciarCompetidorAleatorio() {
-    var randomCuerda = cuerdas[Math.floor(Math.random() * cuerdas.length)];
-    crearCompetidor(randomCuerda);
-    var tiempoAleatorio = Math.random() * 2000; // Puedes ajustar este valor para cambiar el rango de tiempo aleatorio
-    setTimeout(iniciarCompetidorAleatorio, tiempoAleatorio);
-}
+        function reanudarIntervalos() {
+            for (var cuerda in intervalos) {
+                if (!intervalos[cuerda]) {
+                    crearCompetidor(cuerda);
+                }
+            }
+        }
 
-iniciarCompetidorAleatorio();
+
+        function detenerIntervalos() {
+            // Detener todos los intervalos
+            Object.values(intervalos).forEach(function (intervalo) {
+                clearInterval(intervalo);
+            });
+            intervalos = {};
+        }
+
+        function moverCompetidor(cuerda) {
+            var competidores = document.getElementById(cuerda).querySelectorAll(".circulo1");
+            competidores.forEach(function (competidor) {
+                var velocidad = parseFloat(competidor.dataset.velocidad);
+                competidor.style.top = (competidor.offsetTop + velocidad) + "px";
+                if (competidor.offsetTop >= document.getElementById(cuerda).offsetHeight) {
+                    // Detener el juego y mostrar el modal si un disco llega al final de la cuerda
+                    detenerJuego();
+                }
+            });
+        }
+
+
+
+        function detenerJuego() {
+            // Detener todos los intervalos
+            detenerIntervalos();
+
+            // Mostrar el modal con el puntaje y una opción para reiniciar el juego
+            modal.style.display = "flex";
+            content.style.display = "none";
+            var puntajeFinal = document.getElementById("puntajeFinal");
+            puntajeFinal.textContent = "Has perdido. Tu puntaje final es: " + puntaje;
+            var reiniciarBtn = document.getElementById("reiniciarBtn");
+            reiniciarBtn.addEventListener("click", function () {
+                modal.style.display = "none";
+                content.style.display = "flex";
+                reiniciarJuego();
+            });
+        }
+
+        document.addEventListener("keydown", function (evt) {
+            if (evt.key === 'a') {
+                verificarTecla("cuerda1", 'a');
+            }
+            else if (evt.key === 's') {
+                verificarTecla("cuerda2", 's');
+            }
+            else if (evt.key === 'd') {
+                verificarTecla("cuerda3", 'd');
+            }
+            else if (evt.key === 'f') {
+                verificarTecla("cuerda4", 'f');
+            }
+        });
+        function eliminarDisco(cuerda) {
+            var pianoElement = document.querySelector("#" + cuerdas[cuerda[cuerda.length - 1] - 1] + " .piano");
+            var competidores = document.getElementById(cuerda).querySelectorAll(".circulo1");
+            competidores.forEach(function (competidor) {
+                if (competidor.offsetTop < pianoElement.offsetHeight) {
+                    actualizarPuntaje(1);
+                    document.getElementById(cuerda).removeChild(competidor);
+                }
+            });
+        }
+
+        setInterval(function () {
+            var randomCuerda = cuerdas[Math.floor(Math.random() * cuerdas.length)];
+            crearCompetidor(randomCuerda);
+        }, 2000);
 
     </script>
 </body>
