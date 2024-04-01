@@ -254,8 +254,6 @@
         </div>
     </div>
 
-
-
     <script>
         var modal = document.querySelector(".modal");
         var content = document.querySelector(".content");
@@ -278,49 +276,35 @@
         });
 
         function pausarJuego() {
-            // Guardar el estado actual del juego
-            estadoGuardado = {};
+            juegoEnPausa = true;
             cuerdas.forEach(function (cuerda) {
                 var competidores = document.getElementById(cuerda).querySelectorAll(".circulo1");
-                estadoGuardado[cuerda] = Array.from(competidores).map(function (competidor) {
-                    return {
-                        top: competidor.style.top,
-                        velocidad: competidor.dataset.velocidad,
-                        tecla: competidor.dataset.tecla
-                    };
+                competidores.forEach(function (competidor) {
+                    clearInterval(competidor.dataset.intervalo); // Detener el intervalo de movimiento
                 });
             });
-
-            // Detener todos los intervalos
-            Object.values(intervalos).forEach(function (intervalo) {
-                clearInterval(intervalo);
-            });
-            intervalos = {};
         }
+
+
 
         function reanudarJuego() {
-            // Restaurar el estado guardado del juego
+            juegoEnPausa = false;
+            // Reanudar los intervalos pausados
             cuerdas.forEach(function (cuerda) {
-                var cuerdaElement = document.getElementById(cuerda);
-                while (cuerdaElement.firstChild) {
-                    cuerdaElement.removeChild(cuerdaElement.firstChild);
-                }
-                estadoGuardado[cuerda].forEach(function (competidorGuardado) {
-                    var competidorDiv = document.createElement("div");
-                    competidorDiv.setAttribute("class", "circulo1");
-                    competidorDiv.dataset.velocidad = competidorGuardado.velocidad;
-                    competidorDiv.dataset.tecla = competidorGuardado.tecla;
-                    competidorDiv.style.top = competidorGuardado.top;
-                    cuerdaElement.appendChild(competidorDiv);
+                var competidores = document.getElementById(cuerda).querySelectorAll(".circulo1");
+                competidores.forEach(function (competidor) {
+                    if (competidor.dataset.intervalo === null) {
+                        // Reiniciar intervalo solo si está pausado
+                        var intervalo = setInterval(function () {
+                            moverCompetidor(cuerda, competidor);
+                        }, 120);
+                        competidor.dataset.intervalo = intervalo; // Actualizar referencia del intervalo
+                    }
                 });
             });
-
-            // Reiniciar todos los intervalos
-            Object.keys(intervalos).forEach(function (cuerda) {
-                crearCompetidor(cuerda);
-            });
+            // Reanudar todos los intervalos
+            //iniciarIntervalos();
         }
-
 
         startGameBtn.addEventListener("click", function () {
             modal.style.display = "none";
@@ -328,21 +312,36 @@
             reiniciarJuego();
         });
 
-        function reiniciarJuego() {
-            puntaje = puntajeInicial;
-            document.getElementById("puntaje").textContent = puntaje;
-            cuerdas.forEach(function (cuerda) {
-                var cuerdaElement = document.getElementById(cuerda);
-                while (cuerdaElement.children.length > 1) {
-                    cuerdaElement.removeChild(cuerdaElement.lastChild);
-                }
-            });
-            // Detener todos los intervalos cuando se reinicia el juego
-            Object.values(intervalos).forEach(function (intervalo) {
-                clearInterval(intervalo);
-            });
-            intervalos = {};
+        // Agrega una función reanudarElemento() para reanudar un elemento específico
+        function reanudarElemento(competidor) {
+            if (competidor.dataset.intervalo === null && competidor.dataset.intervaloOriginal) {
+                var intervalo = setInterval(function () {
+                    // Mover el competidor con su cuerda asociada
+                    var cuerda = competidor.parentElement.id;
+                    moverCompetidor(cuerda, competidor);
+                }, 120);
+                competidor.dataset.intervalo = intervalo; // Establecer el nuevo intervalo
+            }
         }
+
+
+
+        // Modifica la función reiniciarJuego() para reiniciar correctamente los círculos
+        function reiniciarJuego() {
+            juegoEnPausa = false;
+            cuerdas.forEach(function (cuerda) {
+                var competidores = document.getElementById(cuerda).querySelectorAll(".circulo1");
+                competidores.forEach(function (competidor) {
+                    clearInterval(competidor.dataset.intervalo);
+                    var intervalo = setInterval(function () {
+                        moverCompetidor(cuerda, competidor);
+                    }, 120);
+                    competidor.dataset.intervalo = intervalo; // Establecer el nuevo intervalo
+                });
+            });
+        }
+
+
 
         function actualizarPuntaje(puntos) {
             if (juegoEnPausa) return;
@@ -383,11 +382,13 @@
                 if (cont === Math.floor(content.offsetHeight / competidorDiv.dataset.velocidad)) {
                     verificarTecla(cuerda);
                 }
-            }, 120);b
+            }, 120);
         }
 
         function verificarTecla(cuerda, teclaPresionada) {
+            // Mueve el return aquí para que la función continúe solo si el juego no está en pausa
             if (juegoEnPausa) return;
+
             var pianoElement = document.querySelector("#" + cuerdas[cuerda[cuerda.length - 1] - 1] + " .piano");
             var competidores = document.getElementById(cuerda).querySelectorAll(".circulo1");
             var discoEnPiano = false;
@@ -404,20 +405,37 @@
             }
         }
 
+
         function pausarIntervalos() {
-            for (var cuerda in intervalos) {
-                clearInterval(intervalos[cuerda]);
-                intervalos[cuerda] = null;
-            }
+    for (var id in intervalos) {
+        clearInterval(intervalos[id]);
+        intervalos[id] = null;
+        // Asegurarse de que competidor.dataset.intervalo también se actualiza
+        var competidor = document.querySelector('[data-id="' + id + '"]');
+        if (competidor) {
+            competidor.dataset.intervalo = null;
         }
+    }
+}
+
+
 
         function reanudarIntervalos() {
-            for (var cuerda in intervalos) {
-                if (!intervalos[cuerda]) {
-                    crearCompetidor(cuerda);
-                }
-            }
-        }
+            console.log('Reanudando intervalos...');
+    // Reanudar los intervalos para los círculos en cada cuerda
+    cuerdas.forEach(function (cuerda) {
+        var competidores = document.getElementById(cuerda).querySelectorAll(".circulo1");
+        competidores.forEach(function (competidor) {
+            var velocidad = parseFloat(competidor.dataset.velocidad);
+            var intervalo = setInterval(function () {
+                moverCompetidor(cuerda, competidor);
+            }, 120);
+            // Guardar el intervalo en el objeto intervalos
+            intervalos[competidor.dataset.id] = intervalo;
+        });
+    });
+}
+
 
 
         function detenerIntervalos() {
@@ -439,8 +457,6 @@
                 }
             });
         }
-
-
 
         function detenerJuego() {
             // Detener todos los intervalos
