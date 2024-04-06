@@ -407,34 +407,34 @@
 
 
         function pausarIntervalos() {
-    for (var id in intervalos) {
-        clearInterval(intervalos[id]);
-        intervalos[id] = null;
-        // Asegurarse de que competidor.dataset.intervalo también se actualiza
-        var competidor = document.querySelector('[data-id="' + id + '"]');
-        if (competidor) {
-            competidor.dataset.intervalo = null;
+            for (var id in intervalos) {
+                clearInterval(intervalos[id]);
+                intervalos[id] = null;
+                // Asegurarse de que competidor.dataset.intervalo también se actualiza
+                var competidor = document.querySelector('[data-id="' + id + '"]');
+                if (competidor) {
+                    competidor.dataset.intervalo = null;
+                }
+            }
         }
-    }
-}
 
 
 
         function reanudarIntervalos() {
             console.log('Reanudando intervalos...');
-    // Reanudar los intervalos para los círculos en cada cuerda
-    cuerdas.forEach(function (cuerda) {
-        var competidores = document.getElementById(cuerda).querySelectorAll(".circulo1");
-        competidores.forEach(function (competidor) {
-            var velocidad = parseFloat(competidor.dataset.velocidad);
-            var intervalo = setInterval(function () {
-                moverCompetidor(cuerda, competidor);
-            }, 120);
-            // Guardar el intervalo en el objeto intervalos
-            intervalos[competidor.dataset.id] = intervalo;
-        });
-    });
-}
+            // Reanudar los intervalos para los círculos en cada cuerda
+            cuerdas.forEach(function (cuerda) {
+                var competidores = document.getElementById(cuerda).querySelectorAll(".circulo1");
+                competidores.forEach(function (competidor) {
+                    var velocidad = parseFloat(competidor.dataset.velocidad);
+                    var intervalo = setInterval(function () {
+                        moverCompetidor(cuerda, competidor);
+                    }, 120);
+                    // Guardar el intervalo en el objeto intervalos
+                    intervalos[competidor.dataset.id] = intervalo;
+                });
+            });
+        }
 
 
 
